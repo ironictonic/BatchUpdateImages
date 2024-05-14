@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Figma Plugin UI</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #272727;
+            /* Dark grey background */
+            color: #BEBEBE;
+            /* White text color for better readability on dark background */
+            font-size: 14px;
+        }
+
+        button {
+            background-color: #3C7DE0;
+            /* A blue background for buttons */
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-family: 'Arial', sans-serif;
+            font-size: 14px;
+            margin: 4px 2px;
+            cursor: pointer;
+            border-radius: 5px;
+            /* Rounded corners for buttons */
+        }
+
+        button:active {
+            background-color: #005D92;
+            /* Darker shade when button is pressed */
+        }
+
+        button:disabled {
+            background-color: #4C586A;
+            /* Darker color for disabled state */
+            color: #BEBEBE;
+            /* Optional: Adjusting the text color for better contrast */
+        }
+
+        #layerNamesList {
+            list-style-type: none;
+            /* Removes bullets from the list */
+            padding: 0;
+        }
+
+        #layerNamesList li {
+            margin-bottom: 5px;
+        }
+
+        #plugin-title {
+            font-weight: bold;
+            font-size: 20px;
+            text-align: center;
+        }
+
+        #layerMessage {
+            font-weight: bold;
+            font-size: 14px;
+            text-align: center;
+        }
+
+        #checkmark {
+            color: #009600;
+        }
+
+        #crossmark{
+            color:#ff0000;
+        }
+    </style>
+</head>
+
+<body>
+    <center>
+        <p id="plugin-title">Batch Update Images</p>
+        <p id="layerMessage">Please select one or more image layers to continue.</p>
+
+        <button id="updateImages" disabled>Update Selected Image(s)</button>
+        <input type="file" id="imageInput" multiple style="display: none;" />
+        <button id="checkAll">Check All</button>
+    </center>
+
+    <ul id="layerNamesList"></ul>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const updateImagesButton = document.getElementById('updateImages');
+            const checkAllButton = document.getElementById('checkAll');
+            const messageElement = document.getElementById('layerMessage'); // Accessible for later use
+            updateImagesButton.disabled = true;  // Disable the button initially
+
+            // Event listener for messages from the plugin
+            onmessage = event => {
+                const { type, names, text } = event.data.pluginMessage;
+                if (type === 'display-names') {
+                    const list = document.getElementById('layerNamesList');
+                    list.innerHTML = ''; // Clear existing list
+                    names.forEach(name => {
+                        const listItem = document.createElement('li');
+                        listItem.textContent = name;
+                        list.appendChild(listItem);
+                    });
+
+                    // Update the layerMessage based on the number of selected layers
+                    if (names.length === 0) {
+                        // If no layers are selected, revert to the default message
+                        messageElement.textContent = "Please select one or more image layers to continue.";
+                    } else {
+                        // If layers are selected, display the number of selected layers without parentheses
+                        messageElement.textContent = `${names.length} layers selected.`;
+                    }
+
+                    // Enable or disable the updateImagesButton based on the names array length
+                    updateImagesButton.disabled = names.length === 0;
+                }
+                if (type === 'update-success') {
+                    const checkmarkSpan = document.createElement('span');
+                    const list = document.getElementById('layerNamesList');
+                    const listItem = document.createElement('li');
+                    checkmarkSpan.id = 'checkmark';
+                    checkmarkSpan.textContent = "✔ ";
+                    listItem.appendChild(checkmarkSpan); // Append the checkmark first
+                    listItem.appendChild(document.createTextNode(text)); // Then append the text
+                    list.appendChild(listItem);
+                };
+                if (type === 'update-fail') {
+                    const crossmarkSpan = document.createElement('span');
+                    const list = document.getElementById('layerNamesList');
+                    const listItem = document.createElement('li');
+                    crossmarkSpan.id = 'crossmark';
+                    crossmarkSpan.textContent = "✘ - ";
+                    listItem.appendChild(crossmarkSpan);
+                    listItem.append(document.createTextNode(text));
+                    list.appendChild(listItem);
+                };
+                if (type === 'clear-list') {
+                    const list = document.getElementById('layerNamesList');
+                    list.innerHTML = ''; // Clear existing list
+                }
+            }
+        });
+
+        document.getElementById('updateImages').addEventListener('click', function () {
+            document.getElementById('imageInput').click();
+            console.log("Update Images Button Clicked");
+        });
+
+        document.getElementById('checkAll').addEventListener('click', function () {
+            console.log("Check All Nodes Button Clicked");
+            parent.postMessage({ pluginMessage: { type: 'select-all-images'} }, '*');
+                console.log("Checking Files");
+        });
+
+        document.getElementById('imageInput').addEventListener('change', function (event) {
+            const files = Array.from(event.target.files).map(file => {
+                const reader = new FileReader();
+                return new Promise(resolve => {
+                    reader.onload = () => {
+                        resolve({ name: file.name, content: reader.result });
+                    };
+                    reader.readAsArrayBuffer(file);
+                });
+            });
+
+            Promise.all(files).then(files => {
+                parent.postMessage({ pluginMessage: { type: 'replace-images', files } }, '*');
+                console.log("Posting Files");
+                console.log(files);
+            });
+        });
+    </script>
+</body>
+
+</html>
