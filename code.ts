@@ -114,5 +114,14 @@ figma.ui.onmessage = async msg => {
       // Execute the renamed function
       searchAllNodes();
       break;
+
+    case 'set-dark-mode-setting':
+      await figma.clientStorage.setAsync('darkMode', msg.value);
+      break;
+    case 'get-dark-mode-setting':
+      const darkMode = await figma.clientStorage.getAsync('darkMode');
+      figma.ui.postMessage({ type: 'dark-mode-setting', value: darkMode });
+      break;
+
   }
 };

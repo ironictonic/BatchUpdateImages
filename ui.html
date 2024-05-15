@@ -5,17 +5,15 @@
     <title>Figma Plugin UI</title>
     <style>
         body {
-            font-family: 'Arial', sans-serif;
-            background-color: #272727;
-            /* Dark grey background */
-            color: #BEBEBE;
-            /* White text color for better readability on dark background */
-            font-size: 14px;
-        }
+    font-family: 'Arial', sans-serif;
+    background-color: #f0f0f0;
+    color: #2F2F33;
+    font-size: 14px;
+    overflow-y: scroll; /* Ensure a scrollbar is always present */
+}
 
         button {
             background-color: #3C7DE0;
-            /* A blue background for buttons */
             border: none;
             color: white;
             padding: 10px 20px;
@@ -23,79 +21,263 @@
             text-decoration: none;
             display: inline-block;
             font-family: 'Arial', sans-serif;
-            font-size: 14px;
+            font-weight: bold;
+            font-size: 12px;
             margin: 4px 2px;
             cursor: pointer;
             border-radius: 5px;
-            /* Rounded corners for buttons */
+            height: 32px;
         }
 
         button:active {
             background-color: #005D92;
-            /* Darker shade when button is pressed */
         }
 
         button:disabled {
-            background-color: #4C586A;
-            /* Darker color for disabled state */
-            color: #BEBEBE;
-            /* Optional: Adjusting the text color for better contrast */
+            background-color: #ced8e7;
+            color: #8193ae;
         }
-
+/* Hide scrollbar but still allow scrolling */
+::-webkit-scrollbar {
+    width: 0;
+    background: transparent;
+}
         #layerNamesList {
-            list-style-type: none;
-            /* Removes bullets from the list */
-            padding: 0;
-        }
+    list-style-type: none;
+    padding-left: 10px;
+    font-weight: bold;
+    font-size: 12px;
+    overflow-y: auto; /* Enable vertical scrolling */
+    max-height: 290px; /* Set a max-height for the list */
+    padding-right: 20px; /* Adjust padding to accommodate scrollbar */
+    box-sizing: content-box; /* Prevents layout shift */
+}
 
         #layerNamesList li {
             margin-bottom: 5px;
         }
 
-        #plugin-title {
-            font-weight: bold;
-            font-size: 20px;
-            text-align: center;
-        }
-
         #layerMessage {
             font-weight: bold;
-            font-size: 14px;
+            font-size: 12px;
             text-align: center;
+            padding-top: 20px;
         }
 
         #checkmark {
             color: #009600;
         }
 
-        #crossmark{
-            color:#ff0000;
+        #crossmark {
+            color: #ff0000;
+        }
+
+        .help-button {
+            color: #3C7DE0;
+            font-weight: bold;
+            font-size: 12px;
+            cursor: pointer;
+            text-decoration: none;
+        }
+
+        .help-button:hover {
+            text-decoration: underline;
+        }
+
+        .overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #f0f0f0;
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .overlay-content {
+            font-family: 'Arial', sans-serif;
+            font-size: 12px;
+            color: #2F2F33;
+            max-width: 80%;
+            text-align: left;
+        }
+
+        .close-button {
+            background-color: #808080;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+
+        .close-button:hover {
+            background-color: #656565;
+        }
+
+        .dark-mode {
+            background-color: #2F2F33;
+            color: #f0f0f0;
+        }
+
+        .dark-mode button {
+            background-color: #005D92;
+            color: white;
+        }
+
+        .dark-mode button:active {
+            background-color: #003F5C;
+        }
+
+        .dark-mode button:disabled {
+            background-color: #4C586A;
+            color: #BEBEBE;
+        }
+
+        .dark-mode .overlay {
+            background-color: #2F2F33;
+        }
+
+        .dark-mode .overlay-content {
+            color: #BEBEBE;
+        }
+
+        .dark-mode .help-button {
+            color: #3C7DE0;
+        }
+
+        .dark-mode .help-button:hover {
+            text-decoration: underline;
+        }
+
+        .dark-mode .close-button {
+            background-color: #808080;
+            color: white;
+        }
+
+        .dark-mode .close-button:hover {
+            background-color: #656565;
+        }
+
+        .toggle-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-top: 20px;
+        }
+
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 34px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked+.slider {
+            background-color: #3C7DE0;
+        }
+
+        input:checked+.slider:before {
+            transform: translateX(26px);
         }
     </style>
 </head>
 
 <body>
     <center>
-        <p id="plugin-title">Batch Update Images</p>
         <p id="layerMessage">Please select one or more image layers to continue.</p>
-
+        <p><span class="help-button" id="helpButton">Plugin Instructions</span></p>
         <button id="updateImages" disabled>Update Selected Image(s)</button>
         <input type="file" id="imageInput" multiple style="display: none;" />
         <button id="checkAll">Check All</button>
+
+        <div class="toggle-container">
+            <label class="toggle-switch">
+                <input type="checkbox" id="darkModeToggle">
+                <span class="slider"></span>
+            </label>
+            <span style="margin-left: 10px; font-weight: bold; font-size: 12px;">Dark Mode</span>
+        </div>
     </center>
 
     <ul id="layerNamesList"></ul>
 
+    <div class="overlay" id="overlay">
+        <div class="overlay-content">
+            <h2>
+                <center>Plugin Instructions</center>
+            </h2>
+            <p>1. Select one or more layers with Image Fills to begin. Alternatively, you can click "Check All" to
+                automatically select all layers with Image Fills on your current page.</p>
+            <p>2. Click "Update Selected Image(s)" and select the art file assets you want to use to update your
+                selected layers.</p>
+            <p>3. The plugin will crosscheck the name of your layers with the names of your selected files. When it
+                finds a match, it will automatically update the image fills on those layers.</p>
+            <p><strong><span style="color: green;">Tip:</span></strong> Too lazy to find the exact file(s) in the file
+                browser? No worries! Select all the files you want and any files that don't match are simply ignored!
+            </p>
+            <center><button class="close-button" id="closeButton">Close</button></center>
+        </div>
+    </div>
+
     <script>
-        document.addEventListener("DOMContentLoaded", function () {
+        document.addEventListener("DOMContentLoaded", async function () {
             const updateImagesButton = document.getElementById('updateImages');
             const checkAllButton = document.getElementById('checkAll');
-            const messageElement = document.getElementById('layerMessage'); // Accessible for later use
+            const messageElement = document.getElementById('layerMessage');
+            const helpButton = document.getElementById('helpButton');
+            const overlay = document.getElementById('overlay');
+            const closeButton = document.getElementById('closeButton');
+            const darkModeToggle = document.getElementById('darkModeToggle');
+
+            document.addEventListener('keydown', function (event) {
+                if (event.key === 'Escape') {
+                    overlay.style.display = 'none';
+                }
+            });
+
             updateImagesButton.disabled = true;  // Disable the button initially
+
+            // Request dark mode setting from clientStorage
+            parent.postMessage({ pluginMessage: { type: 'get-dark-mode-setting' } }, '*');
 
             // Event listener for messages from the plugin
             onmessage = event => {
-                const { type, names, text } = event.data.pluginMessage;
+                const { type, names, text, value } = event.data.pluginMessage;
                 if (type === 'display-names') {
                     const list = document.getElementById('layerNamesList');
                     list.innerHTML = ''; // Clear existing list
@@ -105,29 +287,23 @@
                         list.appendChild(listItem);
                     });
 
-                    // Update the layerMessage based on the number of selected layers
                     if (names.length === 0) {
-                        // If no layers are selected, revert to the default message
                         messageElement.textContent = "Please select one or more image layers to continue.";
                     } else {
-                        // If layers are selected, display the number of selected layers without parentheses
                         messageElement.textContent = `${names.length} layers selected.`;
                     }
 
-                    // Enable or disable the updateImagesButton based on the names array length
                     updateImagesButton.disabled = names.length === 0;
-                }
-                if (type === 'update-success') {
+                } else if (type === 'update-success') {
                     const checkmarkSpan = document.createElement('span');
                     const list = document.getElementById('layerNamesList');
                     const listItem = document.createElement('li');
                     checkmarkSpan.id = 'checkmark';
                     checkmarkSpan.textContent = "✔ ";
-                    listItem.appendChild(checkmarkSpan); // Append the checkmark first
-                    listItem.appendChild(document.createTextNode(text)); // Then append the text
+                    listItem.appendChild(checkmarkSpan);
+                    listItem.appendChild(document.createTextNode(text));
                     list.appendChild(listItem);
-                };
-                if (type === 'update-fail') {
+                } else if (type === 'update-fail') {
                     const crossmarkSpan = document.createElement('span');
                     const list = document.getElementById('layerNamesList');
                     const listItem = document.createElement('li');
@@ -136,12 +312,30 @@
                     listItem.appendChild(crossmarkSpan);
                     listItem.append(document.createTextNode(text));
                     list.appendChild(listItem);
-                };
-                if (type === 'clear-list') {
+                } else if (type === 'clear-list') {
                     const list = document.getElementById('layerNamesList');
                     list.innerHTML = ''; // Clear existing list
+                } else if (type === 'dark-mode-setting') {
+                    if (value) {
+                        document.body.classList.add('dark-mode');
+                        darkModeToggle.checked = true;
+                    }
                 }
-            }
+            };
+
+            helpButton.addEventListener('click', function () {
+                overlay.style.display = 'flex';
+            });
+
+            closeButton.addEventListener('click', function () {
+                overlay.style.display = 'none';
+            });
+
+            darkModeToggle.addEventListener('change', function () {
+                const isDarkMode = darkModeToggle.checked;
+                document.body.classList.toggle('dark-mode', isDarkMode);
+                parent.postMessage({ pluginMessage: { type: 'set-dark-mode-setting', value: isDarkMode } }, '*');
+            });
         });
 
         document.getElementById('updateImages').addEventListener('click', function () {
@@ -151,8 +345,8 @@
 
         document.getElementById('checkAll').addEventListener('click', function () {
             console.log("Check All Nodes Button Clicked");
-            parent.postMessage({ pluginMessage: { type: 'select-all-images'} }, '*');
-                console.log("Checking Files");
+            parent.postMessage({ pluginMessage: { type: 'select-all-images' } }, '*');
+            console.log("Checking Files");
         });
 
         document.getElementById('imageInput').addEventListener('change', function (event) {

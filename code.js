@@ -100,5 +100,12 @@ figma.ui.onmessage = (msg) => __awaiter(void 0, void 0, void 0, function* () {
             // Execute the renamed function
             searchAllNodes();
             break;
+        case 'set-dark-mode-setting':
+            yield figma.clientStorage.setAsync('darkMode', msg.value);
+            break;
+        case 'get-dark-mode-setting':
+            const darkMode = yield figma.clientStorage.getAsync('darkMode');
+            figma.ui.postMessage({ type: 'dark-mode-setting', value: darkMode });
+            break;
     }
 });
