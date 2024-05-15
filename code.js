@@ -43,9 +43,7 @@ let layerNames = [];
 figma.ui.onmessage = (msg) => __awaiter(void 0, void 0, void 0, function* () {
     switch (msg.type) {
         case 'replace-images':
-            //console.clear();
             figma.ui.postMessage({ type: 'clear-list' });
-            //console.log(`---------Clearing Console Log---------`);
             console.log('------Processing image updates------');
             const files = msg.files;
             const selectedNodes = figma.currentPage.selection; // Get currently selected nodes
@@ -115,7 +113,10 @@ figma.ui.onmessage = (msg) => __awaiter(void 0, void 0, void 0, function* () {
                 findNodesWithImageFill(figma.currentPage, nodesToProcess);
                 figma.currentPage.selection = nodesToProcess;
                 console.log(nodesToProcess);
-                // Here you can process the nodesToProcess array as needed
+                // Display a notification if no layers with Image Fills are found
+                if (nodesToProcess.length === 0) {
+                    figma.notify("❌  No layers with Image Fills detected in this document!");
+                }
             }
             // Execute the renamed function
             searchAllNodes();
