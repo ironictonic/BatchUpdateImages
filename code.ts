@@ -2,8 +2,30 @@
 
 // This function updates the layer names based on the current selection
 function updateLayerNames() {
-  const layerNames = figma.currentPage.selection.map(node => node.name); // Get names of all selected nodes
+  const layerNames = figma.currentPage.selection.map(node => {
+    if (hasImageFill(node)) {
+      return node.name;
+    } else {
+      return `<span class="warning-symbol">⚠</span> ${node.name}`;
+    }
+  }); // Get names of all selected nodes
+
+  const warningMessage = layerNames.some(name => name.includes('⚠'))
+    ? "Warning: Some layer(s) selected do not have Image Fills!"
+    : "";
+
   figma.ui.postMessage({ type: 'display-names', names: layerNames });
+  figma.ui.postMessage({ type: 'update-message', message: `${layerNames.length} layers selected.` });
+  figma.ui.postMessage({ type: 'warning-message', message: warningMessage });
+}
+
+// This function checks if a node has an Image Fill
+function hasImageFill(node: SceneNode): boolean {
+  // Check if 'fills' is an array and not 'figma.mixed'
+  if ("fills" in node && Array.isArray(node.fills)) {
+    return node.fills.some((fill) => fill.type === "IMAGE");
+  }
+  return false;
 }
 
 // Set up the event listener for selection changes
@@ -122,6 +144,5 @@ figma.ui.onmessage = async msg => {
       const darkMode = await figma.clientStorage.getAsync('darkMode');
       figma.ui.postMessage({ type: 'dark-mode-setting', value: darkMode });
       break;
-
   }
 };

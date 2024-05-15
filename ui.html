@@ -5,12 +5,13 @@
     <title>Figma Plugin UI</title>
     <style>
         body {
-    font-family: 'Arial', sans-serif;
-    background-color: #f0f0f0;
-    color: #2F2F33;
-    font-size: 14px;
-    overflow-y: scroll; /* Ensure a scrollbar is always present */
-}
+            font-family: 'Arial', sans-serif;
+            background-color: #f0f0f0;
+            color: #2F2F33;
+            font-size: 14px;
+            /* overflow-y: scroll; */
+            /* Ensure a scrollbar is always present */
+        }
 
         button {
             background-color: #3C7DE0;
@@ -37,21 +38,53 @@
             background-color: #ced8e7;
             color: #8193ae;
         }
-/* Hide scrollbar but still allow scrolling */
-::-webkit-scrollbar {
-    width: 0;
-    background: transparent;
-}
+
+        /* Hide scrollbar but still allow scrolling
+        ::-webkit-scrollbar {
+            width: 0;
+            background: transparent;
+        } */
+
         #layerNamesList {
-    list-style-type: none;
-    padding-left: 10px;
-    font-weight: bold;
-    font-size: 12px;
-    overflow-y: auto; /* Enable vertical scrolling */
-    max-height: 290px; /* Set a max-height for the list */
-    padding-right: 20px; /* Adjust padding to accommodate scrollbar */
-    box-sizing: content-box; /* Prevents layout shift */
-}
+            list-style-type: none;
+            padding-left: 10px;
+            font-weight: bold;
+            font-size: 12px;
+            overflow-y: auto;
+            /* Enable vertical scrolling */
+            max-height: 290px;
+            /* Set a max-height for the list */
+            padding-right: 20px;
+            /* Adjust padding to accommodate scrollbar */
+            box-sizing: content-box;
+            /* Prevents layout shift */
+        }
+
+        /* Style for the entire scrollbar */
+        #layerNamesList::-webkit-scrollbar {
+            width: 12px;
+        }
+
+        /* Style for the scrollbar track */
+        #layerNamesList::-webkit-scrollbar-track {
+            background: #f0f0f0;
+            /* Change this to the color you want for the scrollbar background */
+        }
+
+        /* Style for the scrollbar thumb */
+        #layerNamesList::-webkit-scrollbar-thumb {
+            background-color: #c4c4c4;
+            /* Change this to the color you want for the scrollbar thumb */
+            border-radius: 20px;
+            border: 3px solid #f0f0f0;
+            /* Matches the track background color */
+        }
+
+        /* Style for the scrollbar thumb when hovered */
+        #layerNamesList::-webkit-scrollbar-thumb:hover {
+            background-color: #005D92;
+            /* Change this to the color you want for the scrollbar thumb when hovered */
+        }
 
         #layerNamesList li {
             margin-bottom: 5px;
@@ -62,6 +95,8 @@
             font-size: 12px;
             text-align: center;
             padding-top: 20px;
+            white-space: pre-wrap;
+            /* This ensures that \n characters are rendered as line breaks */
         }
 
         #checkmark {
@@ -70,6 +105,18 @@
 
         #crossmark {
             color: #ff0000;
+        }
+
+        #warningMessage {
+            color: #ff7b00;
+            font-weight: bold;
+            font-size: 12px;
+        }
+
+        .warning-symbol {
+            font-weight: bolder;
+            font-size: 14px;
+            color: #ff7b00;
         }
 
         .help-button {
@@ -163,6 +210,19 @@
             background-color: #656565;
         }
 
+        .dark-mode #layerNamesList::-webkit-scrollbar-track {
+            background: #2F2F33;
+        }
+
+        .dark-mode #layerNamesList::-webkit-scrollbar-thumb {
+            background-color: #4C586A;
+            border: 3px solid #2F2F33;
+        }
+
+        .dark-mode #layerNamesList::-webkit-scrollbar-thumb:hover {
+            background-color: #3C7DE0;
+        }
+
         .toggle-container {
             display: flex;
             justify-content: center;
@@ -220,6 +280,7 @@
 <body>
     <center>
         <p id="layerMessage">Please select one or more image layers to continue.</p>
+        <p id="warningMessage" style="display: none;"></p>
         <p><span class="help-button" id="helpButton">Plugin Instructions</span></p>
         <button id="updateImages" disabled>Update Selected Image(s)</button>
         <input type="file" id="imageInput" multiple style="display: none;" />
@@ -277,15 +338,29 @@
 
             // Event listener for messages from the plugin
             onmessage = event => {
-                const { type, names, text, value } = event.data.pluginMessage;
+                const { type, names, text, value, message } = event.data.pluginMessage;
                 if (type === 'display-names') {
                     const list = document.getElementById('layerNamesList');
                     list.innerHTML = ''; // Clear existing list
                     names.forEach(name => {
                         const listItem = document.createElement('li');
-                        listItem.textContent = name;
+                        listItem.innerHTML = name; // Use innerHTML to render HTML content
                         list.appendChild(listItem);
                     });
+
+                    const warningElement = document.getElementById('warningMessage');
+                    if (names.length === 0) {
+                        document.getElementById('layerMessage').textContent = "Please select one or more image layers to continue.";
+                        warningElement.style.display = 'none';
+                    } else {
+                        document.getElementById('layerMessage').textContent = `${names.length} layers selected.`;
+                        if (names.some(name => name.includes('⚠'))) {
+                            warningElement.textContent = "Warning: Some layer(s) selected do not have Image Fills!";
+                            warningElement.style.display = 'block';
+                        } else {
+                            warningElement.style.display = 'none';
+                        }
+                    }
 
                     if (names.length === 0) {
                         messageElement.textContent = "Please select one or more image layers to continue.";
@@ -320,6 +395,8 @@
                         document.body.classList.add('dark-mode');
                         darkModeToggle.checked = true;
                     }
+                } else if (type === 'update-message') {
+                    messageElement.textContent = message;
                 }
             };
 
