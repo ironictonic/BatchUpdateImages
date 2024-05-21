@@ -70,6 +70,8 @@ figma.ui.onmessage = (msg) => __awaiter(void 0, void 0, void 0, function* () {
                     figma.ui.postMessage({ type: 'update-success', text: `${file.name.replace(/\.[^/.]+$/, "")}` });
                 });
             });
+            // Send a message to hide the spinner
+            figma.ui.postMessage({ type: 'hide-spinner' });
             break;
         case 'select-all-images':
             yield figma.loadAllPagesAsync();

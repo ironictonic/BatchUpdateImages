@@ -60,6 +60,10 @@
             /* Prevents layout shift */
         }
 
+        .semi-transparent {
+            opacity: 0.25;
+        }
+
         /* Style for the entire scrollbar */
         #layerNamesList::-webkit-scrollbar {
             width: 12px;
@@ -274,6 +278,30 @@
         input:checked+.slider:before {
             transform: translateX(26px);
         }
+
+        .spinner {
+            display: none; /* Hidden by default */
+            position: fixed;
+            z-index: 1000;
+            left: 45%;
+            top: 50%;
+            width: 50px;
+            height: 50px;
+            border: 8px solid #808080;
+            border-top: 8px solid #3498db;
+            border-radius: 50%;
+            animation: spin 2s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
     </style>
 </head>
 
@@ -293,6 +321,7 @@
             </label>
             <span style="margin-left: 10px; font-weight: bold; font-size: 12px;">Dark Mode</span>
         </div>
+        <div id="spinner" class="spinner"></div>
     </center>
 
     <ul id="layerNamesList"></ul>
@@ -324,6 +353,7 @@
             const overlay = document.getElementById('overlay');
             const closeButton = document.getElementById('closeButton');
             const darkModeToggle = document.getElementById('darkModeToggle');
+            const spinner = document.getElementById('spinner');
 
             document.addEventListener('keydown', function (event) {
                 if (event.key === 'Escape') {
@@ -369,23 +399,14 @@
                     }
 
                     updateImagesButton.disabled = names.length === 0;
-                } else if (type === 'update-success') {
-                    const checkmarkSpan = document.createElement('span');
+                } else if (type === 'update-success' || type === 'update-fail') {
                     const list = document.getElementById('layerNamesList');
                     const listItem = document.createElement('li');
-                    checkmarkSpan.id = 'checkmark';
-                    checkmarkSpan.textContent = "✔ ";
-                    listItem.appendChild(checkmarkSpan);
+                    const markSpan = document.createElement('span');
+                    markSpan.textContent = type === 'update-success' ? "✔ " : "✘ - ";
+                    markSpan.style.color = type === 'update-success' ? "#009600" : "#ff0000";
+                    listItem.appendChild(markSpan);
                     listItem.appendChild(document.createTextNode(text));
-                    list.appendChild(listItem);
-                } else if (type === 'update-fail') {
-                    const crossmarkSpan = document.createElement('span');
-                    const list = document.getElementById('layerNamesList');
-                    const listItem = document.createElement('li');
-                    crossmarkSpan.id = 'crossmark';
-                    crossmarkSpan.textContent = "✘ - ";
-                    listItem.appendChild(crossmarkSpan);
-                    listItem.append(document.createTextNode(text));
                     list.appendChild(listItem);
                 } else if (type === 'clear-list') {
                     const list = document.getElementById('layerNamesList');
@@ -397,6 +418,14 @@
                     }
                 } else if (type === 'update-message') {
                     messageElement.textContent = message;
+                }
+
+                // Hide the spinner after processing messages
+                if (type === 'update-success' || type === 'update-fail' || type === 'clear-list') {
+                    spinner.style.display = 'none';
+                    updateImagesButton.disabled = false;
+                    checkAllButton.disabled = false;
+                    layerNamesList.classList.remove('semi-transparent');
                 }
             };
 
@@ -427,6 +456,9 @@
         });
 
         document.getElementById('imageInput').addEventListener('change', function (event) {
+            const updateImagesButton = document.getElementById('updateImages');
+            const checkAllButton = document.getElementById('checkAll');
+            const layerNamesList = document.getElementById('layerNamesList');
             const files = Array.from(event.target.files).map(file => {
                 const reader = new FileReader();
                 return new Promise(resolve => {
@@ -436,6 +468,12 @@
                     reader.readAsArrayBuffer(file);
                 });
             });
+
+            // Show the spinner before starting the file processing
+            spinner.style.display = 'block';
+            updateImagesButton.disabled = true;
+            checkAllButton.disabled = true;
+            layerNamesList.classList.add('semi-transparent');
 
             Promise.all(files).then(files => {
                 parent.postMessage({ pluginMessage: { type: 'replace-images', files } }, '*');
