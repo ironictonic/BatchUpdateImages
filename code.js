@@ -43,35 +43,44 @@ let layerNames = [];
 figma.ui.onmessage = (msg) => __awaiter(void 0, void 0, void 0, function* () {
     switch (msg.type) {
         case 'replace-images':
-            figma.ui.postMessage({ type: 'clear-list' });
-            console.log('------Processing image updates------');
-            const files = msg.files;
-            const selectedNodes = figma.currentPage.selection; // Get currently selected nodes
-            // Define a set of the node types you're interested in
-            const interestedTypes = new Set(['RECTANGLE', 'ELLIPSE', 'POLYGON', 'VECTOR', 'FRAME', 'INSTANCE', 'COMPONENT']);
-            // Function to check if a node is of an interested type and has a matching name
-            function isInterestedNode(node, fileName) {
-                return interestedTypes.has(node.type) && node.name === fileName.replace(/\.[^/.]+$/, "");
-            }
-            files.forEach(file => {
-                // Filter selected nodes that are of an interested type and have a name matching the file name (without extension)
-                const correspondingNodes = selectedNodes.filter(node => isInterestedNode(node, file.name));
-                console.log(`RECORDED: ${file.name}`);
-                // Debugging: Log when no corresponding nodes are found for a file
-                if (correspondingNodes.length === 0) {
-                    console.log(`No matching layers found for file: ${file.name}`);
-                    figma.ui.postMessage({ type: 'update-fail', text: `No match for file: ${file.name.replace(/\.[^/.]+$/, "")}` });
+            try {
+                figma.ui.postMessage({ type: 'clear-list' });
+                console.log('------Processing image updates------');
+                const files = msg.files;
+                const selectedNodes = figma.currentPage.selection; // Get currently selected nodes
+                // Define a set of the node types you're interested in
+                const interestedTypes = new Set(['RECTANGLE', 'ELLIPSE', 'POLYGON', 'VECTOR', 'FRAME', 'INSTANCE', 'COMPONENT']);
+                // Function to check if a node is of an interested type and has a matching name
+                function isInterestedNode(node, fileName) {
+                    return interestedTypes.has(node.type) && node.name === fileName.replace(/\.[^/.]+$/, "");
                 }
-                correspondingNodes.forEach(node => {
-                    const imageHash = figma.createImage(new Uint8Array(file.content)).hash;
-                    if (node.type === 'RECTANGLE' || node.type === 'ELLIPSE' || node.type === 'POLYGON' || node.type === 'VECTOR' || node.type === 'INSTANCE')
-                        node.fills = [{ type: 'IMAGE', scaleMode: 'FILL', imageHash }];
-                    console.log(`SUCCESSFULLY UPDATED: ${file.name}`);
-                    figma.ui.postMessage({ type: 'update-success', text: `${file.name.replace(/\.[^/.]+$/, "")}` });
-                });
-            });
-            // Send a message to hide the spinner
-            figma.ui.postMessage({ type: 'hide-spinner' });
+                for (const file of files) {
+                    // Filter selected nodes that are of an interested type and have a name matching the file name (without extension)
+                    const correspondingNodes = selectedNodes.filter(node => isInterestedNode(node, file.name));
+                    console.log(`RECORDED: ${file.name}`);
+                    // Debugging: Log when no corresponding nodes are found for a file
+                    if (correspondingNodes.length === 0) {
+                        console.log(`No matching layers found for file: ${file.name}`);
+                        figma.ui.postMessage({ type: 'update-fail', text: `No match for file: ${file.name.replace(/\.[^/.]+$/, "")}` });
+                    }
+                    for (const node of correspondingNodes) {
+                        const imageHash = figma.createImage(new Uint8Array(file.content)).hash;
+                        if (node.type === 'RECTANGLE' || node.type === 'ELLIPSE' || node.type === 'POLYGON' || node.type === 'VECTOR' || node.type === 'INSTANCE') {
+                            node.fills = [{ type: 'IMAGE', scaleMode: 'FILL', imageHash }];
+                            console.log(`SUCCESSFULLY UPDATED: ${file.name}`);
+                            figma.ui.postMessage({ type: 'update-success', text: `${file.name.replace(/\.[^/.]+$/, "")}` });
+                        }
+                    }
+                }
+            }
+            catch (error) {
+                console.error('Error during replace images operation:', error);
+                figma.ui.postMessage({ type: 'update-fail', text: 'An error occurred during image replacement.' });
+            }
+            finally {
+                // Send a message to hide the spinner
+                figma.ui.postMessage({ type: 'hide-spinner' });
+            }
             break;
         case 'select-all-images':
             yield figma.loadAllPagesAsync();
