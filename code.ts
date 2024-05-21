@@ -43,15 +43,36 @@ interface ImageFile {
   content: ArrayBuffer;
 }
 
-let layerNames: string[] = [];
+// Function to clear the state
+function clearState() {
+  state.files = [];
+  state.processing = false;
+  state.imageHashes.clear();
+}
+
+// Define a state object to manage the processing status
+const state = {
+  files: [] as ImageFile[],
+  processing: false,
+  imageHashes: new Map<string, string>()
+};
+
 figma.ui.onmessage = async msg => {
   switch (msg.type) {
     case 'replace-images':
+      if (state.processing) {
+        console.log("Processing already in progress, please wait.");
+        return;
+      }
+      state.processing = true;
       try {
         figma.ui.postMessage({ type: 'clear-list' });
+        console.clear();  // Clear the console log
         console.log('------Processing image updates------');
 
-        const files: ImageFile[] = msg.files as ImageFile[];
+        state.files = msg.files as ImageFile[];
+        console.log('Selected files:', state.files);  // Print the selected file data
+
         const selectedNodes = figma.currentPage.selection; // Get currently selected nodes
 
         // Define a set of the node types you're interested in
@@ -62,7 +83,7 @@ figma.ui.onmessage = async msg => {
           return interestedTypes.has(node.type) && node.name === fileName.replace(/\.[^/.]+$/, "");
         }
 
-        for (const file of files) {
+        for (const file of state.files) {
           // Filter selected nodes that are of an interested type and have a name matching the file name (without extension)
           const correspondingNodes = selectedNodes.filter(node => isInterestedNode(node, file.name));
           console.log(`RECORDED: ${file.name}`);
@@ -74,8 +95,16 @@ figma.ui.onmessage = async msg => {
           }
 
           for (const node of correspondingNodes) {
-            const imageHash = figma.createImage(new Uint8Array(file.content)).hash;
-            if (node.type === 'RECTANGLE' || node.type === 'ELLIPSE' || node.type === 'POLYGON' || node.type === 'VECTOR' || node.type === 'INSTANCE') {
+            if (nodeHasFills(node)) {
+              // Clear the previous image fills before creating a new one
+              node.fills = [];
+              let imageHash: string;
+              if (state.imageHashes.has(file.name)) {
+                imageHash = state.imageHashes.get(file.name) as string;
+              } else {
+                imageHash = figma.createImage(new Uint8Array(file.content)).hash;
+                state.imageHashes.set(file.name, imageHash);
+              }
               node.fills = [{ type: 'IMAGE', scaleMode: 'FILL', imageHash }];
               console.log(`SUCCESSFULLY UPDATED: ${file.name}`);
               figma.ui.postMessage({ type: 'update-success', text: `${file.name.replace(/\.[^/.]+$/, "")}` });
@@ -88,6 +117,9 @@ figma.ui.onmessage = async msg => {
       } finally {
         // Send a message to hide the spinner
         figma.ui.postMessage({ type: 'hide-spinner' });
+
+        // Reset the processing state and clear the state
+        clearState();
       }
       break;
 
@@ -156,3 +188,8 @@ figma.ui.onmessage = async msg => {
       break;
   }
 };
+
+// Type guard to check if a node has fills
+function nodeHasFills(node: SceneNode): node is SceneNode & { fills: Paint[] } {
+  return "fills" in node;
+}

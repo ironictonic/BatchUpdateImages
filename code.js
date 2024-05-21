@@ -39,14 +39,32 @@ figma.on('selectionchange', () => {
 });
 figma.showUI(__html__, { width: 400, height: 500 });
 updateLayerNames();
-let layerNames = [];
+// Function to clear the state
+function clearState() {
+    state.files = [];
+    state.processing = false;
+    state.imageHashes.clear();
+}
+// Define a state object to manage the processing status
+const state = {
+    files: [],
+    processing: false,
+    imageHashes: new Map()
+};
 figma.ui.onmessage = (msg) => __awaiter(void 0, void 0, void 0, function* () {
     switch (msg.type) {
         case 'replace-images':
+            if (state.processing) {
+                console.log("Processing already in progress, please wait.");
+                return;
+            }
+            state.processing = true;
             try {
                 figma.ui.postMessage({ type: 'clear-list' });
+                console.clear(); // Clear the console log
                 console.log('------Processing image updates------');
-                const files = msg.files;
+                state.files = msg.files;
+                console.log('Selected files:', state.files); // Print the selected file data
                 const selectedNodes = figma.currentPage.selection; // Get currently selected nodes
                 // Define a set of the node types you're interested in
                 const interestedTypes = new Set(['RECTANGLE', 'ELLIPSE', 'POLYGON', 'VECTOR', 'FRAME', 'INSTANCE', 'COMPONENT']);
@@ -54,7 +72,7 @@ figma.ui.onmessage = (msg) => __awaiter(void 0, void 0, void 0, function* () {
                 function isInterestedNode(node, fileName) {
                     return interestedTypes.has(node.type) && node.name === fileName.replace(/\.[^/.]+$/, "");
                 }
-                for (const file of files) {
+                for (const file of state.files) {
                     // Filter selected nodes that are of an interested type and have a name matching the file name (without extension)
                     const correspondingNodes = selectedNodes.filter(node => isInterestedNode(node, file.name));
                     console.log(`RECORDED: ${file.name}`);
@@ -64,8 +82,17 @@ figma.ui.onmessage = (msg) => __awaiter(void 0, void 0, void 0, function* () {
                         figma.ui.postMessage({ type: 'update-fail', text: `No match for file: ${file.name.replace(/\.[^/.]+$/, "")}` });
                     }
                     for (const node of correspondingNodes) {
-                        const imageHash = figma.createImage(new Uint8Array(file.content)).hash;
-                        if (node.type === 'RECTANGLE' || node.type === 'ELLIPSE' || node.type === 'POLYGON' || node.type === 'VECTOR' || node.type === 'INSTANCE') {
+                        if (nodeHasFills(node)) {
+                            // Clear the previous image fills before creating a new one
+                            node.fills = [];
+                            let imageHash;
+                            if (state.imageHashes.has(file.name)) {
+                                imageHash = state.imageHashes.get(file.name);
+                            }
+                            else {
+                                imageHash = figma.createImage(new Uint8Array(file.content)).hash;
+                                state.imageHashes.set(file.name, imageHash);
+                            }
                             node.fills = [{ type: 'IMAGE', scaleMode: 'FILL', imageHash }];
                             console.log(`SUCCESSFULLY UPDATED: ${file.name}`);
                             figma.ui.postMessage({ type: 'update-success', text: `${file.name.replace(/\.[^/.]+$/, "")}` });
@@ -80,6 +107,8 @@ figma.ui.onmessage = (msg) => __awaiter(void 0, void 0, void 0, function* () {
             finally {
                 // Send a message to hide the spinner
                 figma.ui.postMessage({ type: 'hide-spinner' });
+                // Reset the processing state and clear the state
+                clearState();
             }
             break;
         case 'select-all-images':
@@ -141,3 +170,7 @@ figma.ui.onmessage = (msg) => __awaiter(void 0, void 0, void 0, function* () {
             break;
     }
 });
+// Type guard to check if a node has fills
+function nodeHasFills(node) {
+    return "fills" in node;
+}
