@@ -213,6 +213,14 @@
             margin-top: 20px;
         }
 
+        .toggle-group {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 0px;
+            /* Adjust the gap between toggles as needed */
+        }
+
         .toggle-switch {
             position: relative;
             display: inline-block;
@@ -250,16 +258,16 @@
             border-radius: 50%;
         }
 
-        input:checked + .slider {
+        input:checked+.slider {
             background-color: #3C7DE0;
         }
 
-        input:checked + .slider:before {
+        input:checked+.slider:before {
             transform: translateX(26px);
         }
 
         .spinner {
-            display: none; /* Hidden by default */
+            display: none;
             position: fixed;
             z-index: 1000;
             left: 45%;
@@ -294,11 +302,19 @@
         <button id="checkAll">Check All</button>
 
         <div class="toggle-container">
-            <label class="toggle-switch">
-                <input type="checkbox" id="darkModeToggle">
-                <span class="slider"></span>
-            </label>
-            <span style="margin-left: 10px; font-weight: bold; font-size: 12px;">Dark Mode</span>
+            <div class="toggle-group">
+                <label class="toggle-switch">
+                    <input type="checkbox" id="darkModeToggle">
+                    <span class="slider"></span>
+                </label>
+                <span style="margin-left: 10px; font-weight: bold; font-size: 12px;">Dark Mode</span>
+
+                <label class="toggle-switch" span style="margin-left: 20px;">
+                    <input type="checkbox" id="ignoreSuffixToggle">
+                    <span class="slider"></span>
+                </label>
+                <span style="margin-left: 10px; font-weight: bold; font-size: 12px;">Ignore Suffixes</span>
+            </div>
         </div>
         <div id="spinner" class="spinner"></div>
     </center>
@@ -332,6 +348,7 @@
             const overlay = document.getElementById('overlay');
             const closeButton = document.getElementById('closeButton');
             const darkModeToggle = document.getElementById('darkModeToggle');
+            const ignoreSuffixToggle = document.getElementById('ignoreSuffixToggle');
             const spinner = document.getElementById('spinner');
 
             document.addEventListener('keydown', function (event) {
@@ -344,6 +361,7 @@
 
             // Request dark mode setting from clientStorage
             parent.postMessage({ pluginMessage: { type: 'get-dark-mode-setting' } }, '*');
+            parent.postMessage({ pluginMessage: { type: 'get-ignore-suffixes-setting' } }, '*');
 
             // Event listener for messages from the plugin
             onmessage = event => {
@@ -395,6 +413,10 @@
                         document.body.classList.add('dark-mode');
                         darkModeToggle.checked = true;
                     }
+                } else if (type === 'ignore-suffixes-setting') {
+                    if (value) {
+                        ignoreSuffixToggle.checked = true;
+                    }
                 } else if (type === 'update-message') {
                     messageElement.textContent = message;
                 }
@@ -421,17 +443,19 @@
                 document.body.classList.toggle('dark-mode', isDarkMode);
                 parent.postMessage({ pluginMessage: { type: 'set-dark-mode-setting', value: isDarkMode } }, '*');
             });
+
+            ignoreSuffixToggle.addEventListener('change', function () {
+                const ignoreSuffixes = ignoreSuffixToggle.checked;
+                parent.postMessage({ pluginMessage: { type: 'set-ignore-suffixes', value: ignoreSuffixes } }, '*');
+            });
         });
 
         document.getElementById('updateImages').addEventListener('click', function () {
             document.getElementById('imageInput').click();
-            console.log("Update Images Button Clicked");
         });
 
         document.getElementById('checkAll').addEventListener('click', function () {
-            console.log("Check All Nodes Button Clicked");
             parent.postMessage({ pluginMessage: { type: 'select-all-images' } }, '*');
-            console.log("Checking Files");
         });
 
         document.getElementById('imageInput').addEventListener('change', function (event) {
