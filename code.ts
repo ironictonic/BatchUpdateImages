@@ -104,7 +104,6 @@ figma.ui.onmessage = async msg => {
 
           for (const node of correspondingNodes) {
             if (nodeHasFills(node)) {
-              node.fills = [];
               let imageHash: string;
               if (state.imageHashes.has(file.name)) {
                 imageHash = state.imageHashes.get(file.name) as string;
@@ -112,7 +111,16 @@ figma.ui.onmessage = async msg => {
                 imageHash = figma.createImage(new Uint8Array(file.content)).hash;
                 state.imageHashes.set(file.name, imageHash);
               }
-              node.fills = [{ type: 'IMAGE', scaleMode: 'FILL', imageHash }];
+
+              // Retain existing fill settings
+              const newFills = node.fills.map(fill => {
+                if (fill.type === 'IMAGE') {
+                  return { ...fill, imageHash };
+                }
+                return fill;
+              });
+
+              node.fills = newFills;
               console.log(`SUCCESSFULLY UPDATED: ${file.name}`);
               figma.ui.postMessage({ type: 'update-success', text: `${file.name.replace(/\.[^/.]+$/, "")}` });
             }
